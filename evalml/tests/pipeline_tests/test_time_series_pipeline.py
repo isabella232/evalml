@@ -404,13 +404,16 @@ def test_predict_and_predict_in_sample(
         expected_features_in_sample = expected_features.ww.iloc[20:]
         expected_features_pred = expected_features[20 + gap : 20 + gap + n_to_pred]
 
+    if reset_index:
+        expected_features_pred.reset_index(drop=True, inplace=True)
+
     pl = pipeline_class(component_graph=component_graph, parameters=parameters)
 
     pl.fit(X.iloc[:20], target.iloc[:20])
     preds_in_sample = pl.predict_in_sample(
         X_predict_in_sample, target_predict_in_sample, X.iloc[:20], target.iloc[:20]
     )
-    assert_frame_equal(mock_to_check.call_args[0][0], expected_features_in_sample)
+    assert_frame_equal(mock_to_check.call_args[0][0], expected_features_in_sample, check_index_type=False)
     mock_to_check.reset_mock()
     preds = pl.predict(
         X_predict,
@@ -418,7 +421,7 @@ def test_predict_and_predict_in_sample(
         X_train=X.iloc[:20],
         y_train=target.iloc[:20],
     )
-    assert_frame_equal(mock_to_check.call_args[0][0], expected_features_pred)
+    assert_frame_equal(mock_to_check.call_args[0][0], expected_features_pred, check_index_type=False)
     if is_classification(pl.problem_type):
         pred_proba = pl.predict_proba(
             X_predict,
@@ -426,12 +429,11 @@ def test_predict_and_predict_in_sample(
             y_train=target.iloc[:20],
         )
         assert_frame_equal(
-            mock_classifier_predict_proba.call_args[0][0], expected_features_pred
+            mock_classifier_predict_proba.call_args[0][0], expected_features_pred, check_index_type=False
         )
         assert len(pred_proba) == n_to_pred
 
     assert len(preds) == n_to_pred
-    assert (preds.index == target.iloc[20 + gap : 20 + n_to_pred + gap].index).all()
     assert len(preds_in_sample) == len(target.iloc[20:])
     assert (preds_in_sample.index == target.iloc[20:].index).all()
 
@@ -514,7 +516,7 @@ def test_predict_and_predict_in_sample_with_date_index(
         X_train=X.iloc[:20],
         y_train=target.iloc[:20],
     )
-    assert_frame_equal(mock_to_check.call_args[0][0], expected_features_pred)
+    assert_frame_equal(mock_to_check.call_args[0][0], expected_features_pred, check_index_type=False)
 
     assert len(preds) == 1
     assert (preds.index == target.iloc[20 + 1 : 20 + 1 + 1].index).all()
@@ -834,6 +836,7 @@ def test_binary_classification_predictions_thresholded_properly(
     mock_predict_proba.return_value = proba
     X, y = X_y_binary
     X, y = pd.DataFrame(X), pd.Series(y)
+    X['date'] = pd.Series(pd.date_range("2018-01-01", periods=X.shape[0]))
     X_train, y_train = X.iloc[:60], y.iloc[:60]
     X_validation = X.iloc[60:63]
     binary_pipeline = dummy_ts_binary_pipeline_class(
@@ -1070,6 +1073,9 @@ def test_binary_predict_pipeline_use_objective(
     mock_decision_function, X_y_binary, time_series_binary_classification_pipeline_class
 ):
     X, y = X_y_binary
+    X = pd.DataFrame(X)
+    y = pd.Series(y)
+    X['date'] = pd.Series(pd.date_range("2010-01-01", periods=X.shape[0]))
     binary_pipeline = time_series_binary_classification_pipeline_class(
         parameters={
             "Logistic Regression Classifier": {"n_jobs": 1},
@@ -1221,6 +1227,7 @@ def test_ts_pipeline_predict_without_final_estimator(
     X, y = X_y_binary
     X = make_data_type("ww", X)
     y = make_data_type("ww", y)
+    X.ww['date'] = pd.Series(pd.date_range("2015-01-01", periods=X.shape[0]))
     X_train, y_train = X.ww.iloc[:70], y.ww.iloc[:70]
     X_validation = X.ww.iloc[70:73]
 
@@ -1280,6 +1287,7 @@ def test_ts_pipeline_transform(
     X, y = X_y_binary
     X = make_data_type("ww", X)
     y = make_data_type("ww", y)
+    X.ww['date'] = pd.Series(pd.date_range("2015-01-01", periods=X.shape[0]))
     X_train, y_train = X.ww.iloc[:70], y.ww.iloc[:70]
     X_validation, y_validation = X.ww.iloc[70:73], y.ww.iloc[70:73]
     mock_imputer_transform.side_effect = lambda x, y: x

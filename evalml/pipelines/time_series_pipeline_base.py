@@ -42,6 +42,7 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
             raise ValueError("Parameter date_index cannot be None!")
         self.gap = pipeline_params["gap"]
         self.max_delay = pipeline_params["max_delay"]
+        self.date_index = date_index
         self.forecast_horizon = pipeline_params["forecast_horizon"]
         super().__init__(
             component_graph,
@@ -81,18 +82,15 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
             return index + gap
 
     @staticmethod
-    def _are_datasets_separated_by_gap(train_index, test_index, gap):
+    def _are_datasets_separated_by_gap(train_date_index, test_date_index, gap):
         """Determine if the train and test datasets are separated by gap number of units.
 
         This will be true when users are predicting on unseen data but not during cross
         validation since the target is known.
         """
         gap_difference = gap + 1
-        index_difference = test_index[0] - train_index[-1]
-        if isinstance(
-            train_index, (pd.DatetimeIndex, pd.PeriodIndex, pd.TimedeltaIndex)
-        ):
-            gap_difference *= test_index.freq
+        index_difference = test_date_index.iloc[0] - train_date_index.iloc[-1]
+        gap_difference = pd.Timedelta(gap_difference, unit=pd.infer_freq(train_date_index))
         return index_difference == gap_difference
 
     def _validate_holdout_datasets(self, X, X_train):
@@ -107,9 +105,6 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
                 are not separated by gap.
         """
         right_length = len(X) <= self.forecast_horizon
-        #X_separated_by_gap = self._are_datasets_separated_by_gap(
-        #    X_train.index, X.index, self.gap
-        #)
         if not (right_length):
             raise ValueError(
                 f"Holdout data X must have {self.forecast_horizon}  rows (value of forecast horizon) "
@@ -128,7 +123,7 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
         gap_features = pd.DataFrame()
         gap_target = pd.Series()
         if (
-            self._are_datasets_separated_by_gap(X_train.index, X.index, self.gap)
+            self._are_datasets_separated_by_gap(X_train[self.date_index], X[self.date_index], self.gap)
             and self.gap
         ):
             # The training data does not have the gap dates so don't need to include them
@@ -247,9 +242,6 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
                 "Cannot call predict() on a component graph because the final component is not an Estimator."
             )
         X = infer_feature_types(X)
-        #X.index = self._move_index_forward(
-        #    X_train.index[-X.shape[0] :], self.gap + X.shape[0]
-        #)
         self._validate_holdout_datasets(X, X_train)
         y_holdout = self._create_empty_series(y_train, X.shape[0])
         y_holdout = infer_feature_types(y_holdout)
