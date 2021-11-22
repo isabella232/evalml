@@ -107,10 +107,10 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
                 are not separated by gap.
         """
         right_length = len(X) <= self.forecast_horizon
-        X_separated_by_gap = self._are_datasets_separated_by_gap(
-            X_train.index, X.index, self.gap
-        )
-        if not (right_length and X_separated_by_gap):
+        #X_separated_by_gap = self._are_datasets_separated_by_gap(
+        #    X_train.index, X.index, self.gap
+        #)
+        if not (right_length):
             raise ValueError(
                 f"Holdout data X must have {self.forecast_horizon}  rows (value of forecast horizon) "
                 "and its index needs to "
@@ -247,9 +247,9 @@ class TimeSeriesPipelineBase(PipelineBase, metaclass=PipelineBaseMeta):
                 "Cannot call predict() on a component graph because the final component is not an Estimator."
             )
         X = infer_feature_types(X)
-        X.index = self._move_index_forward(
-            X_train.index[-X.shape[0] :], self.gap + X.shape[0]
-        )
+        #X.index = self._move_index_forward(
+        #    X_train.index[-X.shape[0] :], self.gap + X.shape[0]
+        #)
         self._validate_holdout_datasets(X, X_train)
         y_holdout = self._create_empty_series(y_train, X.shape[0])
         y_holdout = infer_feature_types(y_holdout)
