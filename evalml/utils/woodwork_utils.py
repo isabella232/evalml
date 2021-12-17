@@ -145,6 +145,8 @@ def _schema_is_equal(first, other):
         bool: Whether or not the two schemas are equal
     """
     if first.types.index.tolist() != other.types.index.tolist():
+        print(f"First: {first.types.index.tolist()}")
+        print(f"Second: {other.types.index.tolist()}")
         return False
     logical = [
         x if x != "Integer" else "Double"
@@ -153,5 +155,13 @@ def _schema_is_equal(first, other):
         x if x != "Integer" else "Double"
         for x in other.types["Logical Type"].astype(str).tolist()
     ]
+    if not logical:
+        first_t = [x if x != "Integer" else "Double" for x in first.types["Logical Type"].astype(str).tolist()]
+        second_t = [x if x != "Integer" else "Double" for x in other.types["Logical Type"].astype(str).tolist()]
+        diff = {col: (first_t[i], second_t[i]) for i, col in enumerate(first.types.index) if first_t[i] != second_t[i]}
+        print(f"Diff: {diff}")
     semantic = first.semantic_tags == other.semantic_tags
+    if not semantic:
+        diff = {k: (v, other.semantic_tags.get(k)) for k, v in first.semantic_tags.items() if v != other.semantic_tags.get(k)}
+        print(f"Diff Semantic: {diff}")
     return logical and semantic
