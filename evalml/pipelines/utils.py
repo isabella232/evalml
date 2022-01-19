@@ -43,6 +43,7 @@ from evalml.pipelines.components import (  # noqa: F401
     TimeSeriesFeaturizer,
     Undersampler,
     URLFeaturizer,
+    PolynomialDetrender
 )
 from evalml.pipelines.components.transformers.encoders.label_encoder import (
     LabelEncoder,
@@ -56,16 +57,19 @@ from evalml.problem_types import (
     handle_problem_types,
     is_classification,
     is_time_series,
+    is_regression
 )
 from evalml.utils import import_or_raise, infer_feature_types
 
 logger = logging.getLogger(__name__)
 
 
-def _get_label_encoder(X, y, problem_type, estimator_class, sampler_name=None):
+def _get_target_transformer(X, y, problem_type, estimator_class, sampler_name=None):
     component = []
     if is_classification(problem_type):
         component.append(LabelEncoder)
+    elif is_time_series(problem_type) and is_regression(problem_type):
+        component.append(PolynomialDetrender)
     return component
 
 
@@ -239,7 +243,7 @@ def _get_preprocessing_components(
     """
     if is_time_series(problem_type):
         components_functions = [
-            _get_label_encoder,
+            _get_target_transformer,
             _get_drop_all_null,
             _get_replace_null,
             _get_drop_index_unknown,
@@ -254,7 +258,7 @@ def _get_preprocessing_components(
         ]
     else:
         components_functions = [
-            _get_label_encoder,
+            _get_target_transformer,
             _get_drop_all_null,
             _get_replace_null,
             _get_drop_index_unknown,
