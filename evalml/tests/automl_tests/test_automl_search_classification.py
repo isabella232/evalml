@@ -1657,3 +1657,33 @@ def test_automl_passes_allow_long_running_models(
         estimators.extend(["CatBoost Classifier", "XGBoost Classifier"])
 
     assert "Dropping estimators {}".format(", ".join(sorted(estimators))) in caplog.text
+
+
+@pytest.mark.parametrize("positive_label", [True, False])
+def test_automl_binary_label_encoder(
+    positive_label,
+    fraud_100,
+    AutoMLTestEnv,
+):
+    X, y = fraud_100
+    pipeline_parameters = {"Label Encoder": {"positive_label": positive_label}}
+    automl = AutoMLSearch(
+        X_train=X,
+        y_train=y,
+        problem_type="binary",
+        pipeline_parameters=pipeline_parameters,
+        max_batches=1,
+    )
+    env = AutoMLTestEnv("binary")
+    with env.test_context(score_return_value={automl.objective.name: 1.0}):
+        automl.search()
+    found_pipes = False
+    for ids in automl.rankings.id:
+        if ids > 0:
+            pipeline = automl.get_pipeline(ids)
+            assert (
+                pipeline.get_component("Label Encoder").parameters["positive_label"]
+                == positive_label
+            )
+            found_pipes = True
+    assert found_pipes
