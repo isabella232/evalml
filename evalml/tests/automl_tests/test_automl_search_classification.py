@@ -1677,13 +1677,9 @@ def test_automl_binary_label_encoder(
     env = AutoMLTestEnv("binary")
     with env.test_context(score_return_value={automl.objective.name: 1.0}):
         automl.search()
-    found_pipes = False
-    for ids in automl.rankings.id:
-        if ids > 0:
-            pipeline = automl.get_pipeline(ids)
-            assert (
-                pipeline.get_component("Label Encoder").parameters["positive_label"]
-                == positive_label
-            )
-            found_pipes = True
-    assert found_pipes
+    assert all(
+        [
+            p["Label Encoder"]["positive_label"] == positive_label
+            for p in automl.full_rankings["parameters"][1:]
+        ]
+    )
