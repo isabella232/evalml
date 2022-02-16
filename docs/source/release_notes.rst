@@ -9,6 +9,7 @@
     * Changes
         * Added an ``is_cv`` property to the datasplitters used :pr:`3297`
         * Added drop NaN component to some time series pipelines :pr:`3310`
+        * Removed ``python_versrion<3.9`` environment marker from sktime dependency :pr:`3332`
     * Documentation Changes
         * Update README.md with Alteryx link (:pr:`3319`)
         * Added formatting to the AutoML user guide to shorten result outputs :pr:`3328`
